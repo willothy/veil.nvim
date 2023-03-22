@@ -1,42 +1,8 @@
 local veil = {}
 
+local Section = require("veil.section")
+
 local veil_loaded = false
-
--- local Section = require('veil').section
--- local s = Section:new()
--- print(s)
-
----@class Section
----@field contents fun():string[]
----@field state table
----@field interactive boolean
-local Section = {
-	contents = function(_self)
-		return { "configure your veil!" }
-	end,
-	state = {},
-	interactive = false,
-	__index = {
-		new = function(self, opts)
-			local new = vim.tbl_deep_extend("keep", opts or {}, self)
-			-- setmetatable(new, {
-			-- 	render = new.contents,
-			-- 	interactive = function()
-			-- 		return new.interactive
-			-- 	end,
-			-- })
-			new.__index = new.state
-			-- new.__newindex = function(_t, _k, _v)
-			-- 	error("attempt to update a read-only table", 2)
-			-- end
-			new.state = nil
-			new.contents = nil
-			new.interactive = nil
-			return new
-		end,
-	},
-}
-setmetatable(Section, Section)
 
 local defaults = {
 	---@type Section[]
@@ -50,8 +16,6 @@ local defaults = {
 local function configure(opts)
 	return vim.tbl_deep_extend("force", defaults, opts)
 end
-
-veil.section = Section
 
 function veil.display(replace)
 	if replace then
