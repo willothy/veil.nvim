@@ -7,6 +7,8 @@ local Rendered = {
 	longest = 0,
 	virt = true,
 	hl = "Normal",
+	on_interact = nil,
+	super = nil,
 }
 
 function Rendered:pad(width)
@@ -57,7 +59,7 @@ end
 ---@alias SectionOpts Section
 ---@type fun(opts: table):Section
 function Section:new(opts)
-	local new = vim.tbl_deep_extend("keep", opts or {}, self)
+	local new = vim.tbl_deep_extend("force", self, opts)
 
 	local mt = {
 		__index = new.state,
@@ -78,9 +80,12 @@ function Section:new(opts)
 	-- Generate random id for section hlgroup
 	local hl_id = "VeilSection" .. math.floor(math.random() * 100)
 
+	local instance = {}
+
 	-- Build the section and render function
 	mt.__index.contents = new.contents
 	mt.__index.interactive = new.interactive
+	mt.__index.on_interact = new.on_interact
 	mt.__index.hl = hl_id
 	mt.__index.hl_val = new.hl
 	---@type fun(tbl:Section):Rendered
@@ -104,17 +109,20 @@ function Section:new(opts)
 		else
 			error("Section.contents must be a function, string[], or string", 2)
 		end
+
 		return Rendered:new({
 			text = contents,
 			nlines = #contents,
 			longest = utils.longest_line(contents),
 			virt = not tbl.interactive,
 			hl = tbl.hl,
-			interaction = tbl.interactions,
+			on_interact = new.on_interact ~= nil and function(relno, col)
+				instance:on_interact(relno, col)
+			end or nil,
 		})
 	end
 
-	return setmetatable({}, mt)
+	return setmetatable(instance, mt)
 end
 
 return Section

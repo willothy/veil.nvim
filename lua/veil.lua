@@ -28,6 +28,8 @@ function veil.display(replace)
 	vim.api.nvim_win_set_hl_ns(veil.win, veil.ns)
 	vim.cmd("setlocal nonu nornu nolist")
 
+	vim.keymap.set("n", "<CR>", veil.interact, { buffer = veil.buf, noremap = true })
+
 	for map, cmd in pairs(veil.settings.mappings) do
 		vim.keymap.set("n", map, cmd, {
 			silent = true,
@@ -64,7 +66,42 @@ function veil.display(replace)
 	)
 end
 
+veil.loclist = {}
+
+local locations = {}
+function locations.clear()
+	for i, _ in ipairs(veil.loclist) do
+		veil.loclist[i] = nil
+	end
+end
+
+function locations.find(line)
+	for _, loc in ipairs(veil.loclist) do
+		if line > loc.startl and line <= loc.endl then
+			return loc
+		end
+	end
+	return nil
+end
+
+function veil.interact()
+	local cursor = vim.api.nvim_win_get_cursor(veil.win)
+	local line = cursor[1]
+	local col = cursor[2]
+	local res = locations.find(line)
+	if not res then
+		return
+	end
+	local handle = res.handle
+	local startl = res.startl
+	local relno = line - startl
+	if handle.on_interact then
+		handle.on_interact(relno, col)
+	end
+end
+
 function veil.redraw(init)
+	locations.clear()
 	veil.ns = vim.api.nvim_create_namespace("veil")
 	local utils = require("veil.utils")
 	local win_width = vim.api.nvim_win_get_width(veil.win)
@@ -83,6 +120,7 @@ function veil.redraw(init)
 		vim.api.nvim_buf_set_lines(veil.buf, 0, -1, true, utils.empty(win_height - veil_height))
 	end
 
+	-- local entry = { 0, 1, on_interact }
 	local current_height = 0
 	if veil_height < win_height then
 		current_height = (win_height - (veil_height * 2)) / 2
@@ -102,6 +140,9 @@ function veil.redraw(init)
 				virt_lines = virt,
 			})
 		end
+
+		veil.loclist[#veil.loclist + 1] =
+			{ startl = current_height, endl = current_height + section.nlines, handle = section }
 
 		current_height = current_height + section.nlines
 	end

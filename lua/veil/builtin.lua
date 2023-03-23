@@ -39,10 +39,19 @@ function builtin.sections.buttons(buttons, options)
 		state = {
 			buttons = buttons,
 		},
+		on_interact = function(self, line, _col)
+			self.buttons[line].callback()
+		end,
 		contents = function(self)
 			local lines = {}
 			for _, button in ipairs(self.buttons) do
-				local s = string.format("[%s]  %s  %s", button.shortcut, button.icon, button.text)
+				local s = string.format(
+					"[ %s ]%s%s  %s",
+					button.shortcut,
+					string.rep(" ", opts.spacing or 2),
+					button.icon,
+					button.text
+				)
 				if #s % 2 ~= 0 then
 					s = s .. " "
 				end
@@ -52,9 +61,6 @@ function builtin.sections.buttons(buttons, options)
 		end,
 		hl = opts.hl or "Normal",
 		interactive = true,
-		on_interact = function(_self, button)
-			button.callback()
-		end,
 	})
 end
 

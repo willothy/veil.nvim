@@ -42,7 +42,7 @@ local default = {
 					})
 				end,
 			},
-		}),
+		}, { spacing = 6 }),
 		builtin.sections.padding(3),
 	},
 	mappings = {},

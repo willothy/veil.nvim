@@ -1,31 +1,33 @@
 # veil.nvim
 
-A dynamic, animated, and infinitely customizeable startup / dashboard plugin
- 
+A blazingly fast, animated, and infinitely customizeable startup / dashboard plugin
+
 > Work in progress, there may be some bugs :)
 
 ## Features
 
 - [x] Animated sections rendered with virtual text
-  - [x] Builtin frames/animation util
+- [x] Builtin "standard library"
+  - [x] Buttons builtin
+  - [x] Ascii frame anim builtin
+  - [x] Vertical padding builtin
 - [x] Static text sections
 - [x] Dynamic text sections
   - [x] Per-section state
 - [x] Simple and extensible API
-- [ ] Interactible components (WIP)
-- [ ] Mouse events
+- [x] Interactible components (use buttons with `<CR>`)
+  - [ ] Cursor 'hover' events
+  - [ ] Lock cursor to menus
 - [x] Highlighting
-- [X] Shortcut mappings
+- [x] Shortcut mappings
+- [x] Startup in <1ms
+- [ ] Mouse events
 
 ## Demo (default config)
 
 <!--https://user-images.githubusercontent.com/38540736/227105511-7988cd83-be56-4606-a32d-07d6245d1307.mp4-->
 
-
-https://user-images.githubusercontent.com/38540736/227181889-26249a1d-d6d3-4130-aae5-6891498fed68.mp4
-
-
-Note: This will be significantly improved once interactive components are in.
+https://user-images.githubusercontent.com/38540736/227207398-b8f7af6a-0e88-4874-93fa-196e78c14938.mp4
 
 ## Installation
 
@@ -49,22 +51,18 @@ Note: This will be significantly improved once interactive components are in.
 <summary>Veil comes with the following defaults</summary>
 <br/>
 
-
 The defaults assume you have Telescope installed because... you probably do.<br/>
 
-
-
 ```lua
-local builtin = require('veil.builtin')
+local builtin = require("veil.builtin")
 
-{ 
+local default = {
 	sections = {
-		-- default anim
-		builtin.animated(frames_nvim, {
+		builtin.sections.animated(builtin.headers.frames_nvim, {
 			hl = { fg = "#5de4c7" },
 		}),
-		builtin.padding(2),
-		builtin.buttons({
+		builtin.sections.padding(2),
+		builtin.sections.buttons({
 			{
 				icon = "",
 				text = "Find Files",
@@ -100,7 +98,7 @@ local builtin = require('veil.builtin')
 				end,
 			},
 		}),
-		builtin.padding(3),
+		builtin.sections.padding(3),
 	},
 	mappings = {},
 	startup = true,
