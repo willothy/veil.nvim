@@ -53,6 +53,7 @@ function veil.display(replace)
 	veil.state.open = true
 	local timer = vim.loop.new_timer()
 	veil.redraw(true)
+
 	timer:start(
 		200,
 		200,
@@ -120,10 +121,9 @@ function veil.redraw(init)
 		vim.api.nvim_buf_set_lines(veil.buf, 0, -1, true, utils.empty(win_height - veil_height))
 	end
 
-	-- local entry = { 0, 1, on_interact }
 	local current_height = 0
 	if veil_height < win_height then
-		current_height = math.ceil((win_height - (veil_height * 2)) / 2)
+		current_height = math.floor((win_height - (veil_height * 2)) / 2)
 	end
 	for id, section in ipairs(rendered) do
 		if not section.virt then
@@ -136,7 +136,7 @@ function veil.redraw(init)
 			end
 			vim.api.nvim_buf_set_extmark(veil.buf, veil.ns, current_height, 0, {
 				id = id,
-				virt_text_pos = "overlay",
+				virt_text_pos = "eol",
 				virt_lines = virt,
 			})
 		end
