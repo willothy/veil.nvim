@@ -2,7 +2,7 @@ local Section = require("veil.section")
 
 local builtin = {}
 
-function builtin.animated(frames)
+function builtin.animated(frames, opts)
 	return Section:new({
 		state = {
 			frames = frames,
@@ -21,6 +21,7 @@ function builtin.animated(frames)
 				return frame
 			end
 		end,
+		hl = opts.hl or "Normal",
 	})
 end
 

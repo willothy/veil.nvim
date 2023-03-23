@@ -12,6 +12,8 @@ local default = {
 			{ "-- Veil -+", "-+ Veil --" },
 			{ "++ Veil --", "-- Veil ++" },
 			{ "-+ Veil --", "-- Veil -+" },
+		}, {
+			hl = { fg = "#5de4c7" },
 		}),
 	},
 	mappings = {},

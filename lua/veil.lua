@@ -7,6 +7,7 @@ local function configure(opts)
 end
 
 function veil.display(replace)
+	veil.ns = vim.api.nvim_create_namespace("veil")
 	if veil.state.open == true then
 		return
 	end
@@ -22,6 +23,7 @@ function veil.display(replace)
 	vim.api.nvim_buf_set_name(veil.buf, "Veil")
 	vim.api.nvim_set_current_buf(veil.buf)
 	veil.win = vim.api.nvim_get_current_win()
+	vim.api.nvim_win_set_hl_ns(veil.win, veil.ns)
 	vim.cmd("setlocal nonu nornu nolist")
 
 	for map, cmd in pairs(veil.settings.mappings) do
@@ -60,51 +62,48 @@ function veil.display(replace)
 	)
 end
 
-local function longest_line(lines)
-	local longest = 0
-	for _, line in ipairs(lines) do
-		if #line > longest then
-			longest = #line
-		end
-	end
-	return longest
-end
+function veil.redraw(init)
+	veil.ns = vim.api.nvim_create_namespace("veil")
+	local utils = require("veil.utils")
+	local win_width = vim.api.nvim_win_get_width(veil.win)
+	local win_height = vim.api.nvim_win_get_height(veil.win)
 
-function veil.redraw()
-	local lines = {}
-	local width = vim.api.nvim_win_get_width(veil.win)
-	local height = vim.api.nvim_win_get_height(veil.win)
-	for _, section in ipairs(veil.settings.sections) do
-		local rendered = section:render()
-		local longest = longest_line(rendered)
-		local padding = 0
-		if longest < width then
-			padding = (width - (longest * 2)) / 2
-		end
-		for _, line in ipairs(rendered) do
-			table.insert(lines, string.rep(" ", padding) .. line)
-		end
+	local rendered = {}
+	local veil_height = 0
+	for _, s in ipairs(veil.settings.sections) do
+		local section = s:render():pad(win_width)
+		veil_height = veil_height + section.nlines
+		table.insert(rendered, section)
 	end
 
-	if #lines < height then
-		local height_padding = (height - #lines) / 2
-		for i = 1, height_padding, 1 do
-			if i <= height_padding then
-				table.insert(lines, 1, "")
+	vim.api.nvim_buf_set_option(veil.buf, "modifiable", true)
+	if init then
+		vim.api.nvim_buf_set_lines(veil.buf, 0, -1, true, utils.empty(win_height - veil_height))
+	end
+
+	local current_height = 0
+	if veil_height < win_height then
+		current_height = (win_height - (veil_height * 2)) / 2
+	end
+	for id, section in ipairs(rendered) do
+		if not section.virt then
+			vim.api.nvim_buf_set_lines(veil.buf, current_height, -1, true, section.text)
+		else
+			local virt = {}
+			for _, line in ipairs(section.text) do
+				local leading, rest = utils.split_leading(line)
+				table.insert(virt, { { leading, "Normal" }, { rest, section.hl } })
 			end
+			vim.api.nvim_buf_set_extmark(veil.buf, veil.ns, current_height, 0, {
+				id = id,
+				virt_text_pos = "overlay",
+				virt_lines = virt,
+			})
 		end
-	end
 
-	local virt = {}
-	for _, line in ipairs(lines) do
-		table.insert(virt, { { line, "Normal" } })
+		current_height = current_height + section.nlines
 	end
-
-	vim.api.nvim_buf_set_extmark(veil.buf, veil.ns, 0, 0, {
-		id = 1,
-		virt_text_pos = "overlay",
-		virt_lines = virt,
-	})
+	vim.api.nvim_buf_set_option(veil.buf, "modifiable", false)
 end
 
 function veil.setup(opts)
@@ -117,6 +116,9 @@ function veil.setup(opts)
 	veil.state = {
 		open = false,
 	}
+
+	-- TODO: Do I really need this?
+	math.randomseed(os.time())
 
 	if veil.settings.startup then
 		vim.api.nvim_create_autocmd("VimEnter", {
