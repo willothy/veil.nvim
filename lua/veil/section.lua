@@ -73,10 +73,6 @@ function Section:new(opts)
 		end,
 	}
 
-	if type(new.hl) == "string" then
-		new.hl = vim.api.nvim_get_hl_by_name(new.hl, true)
-	end
-
 	-- Generate random id for section hlgroup
 	local hl_id = "VeilSection" .. math.floor(math.random() * 100)
 
@@ -94,6 +90,14 @@ function Section:new(opts)
 		local hl_val
 		if type(tbl.hl_val) == "function" then
 			hl_val = tbl:hl_val()
+		elseif type(tbl.hl_val) == "string" then
+			hl_val = {
+				fg = vim.fn.synIDattr(vim.fn.hlID(tbl.hl_val), "fg"),
+				bg = vim.fn.synIDattr(vim.fn.hlID(tbl.hl_val), "bg"),
+				bold = vim.fn.synIDattr(vim.fn.hlID(tbl.hl_val), "bold") == 1,
+				italic = vim.fn.synIDattr(vim.fn.hlID(tbl.hl_val), "italic") == 1,
+				underline = vim.fn.synIDattr(vim.fn.hlID(tbl.hl_val), "underline") == 1,
+			}
 		else
 			hl_val = tbl.hl_val
 		end

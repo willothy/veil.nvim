@@ -123,7 +123,7 @@ function veil.redraw(init)
 	-- local entry = { 0, 1, on_interact }
 	local current_height = 0
 	if veil_height < win_height then
-		current_height = (win_height - (veil_height * 2)) / 2
+		current_height = math.ceil((win_height - (veil_height * 2)) / 2)
 	end
 	for id, section in ipairs(rendered) do
 		if not section.virt then
