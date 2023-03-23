@@ -10,14 +10,19 @@ local Rendered = {
 }
 
 function Rendered:pad(width)
-	local padding
-	if self.longest < width then
-		padding = (width - (self.longest * 2)) / 2
+	local text = vim.deepcopy(self.text)
+	local padding = 0
+	if self.longest < width and self.longest > 0 then
+		padding = math.ceil((width - self.longest) / 2)
 	end
-	for lno, line in ipairs(self.text) do
-		self.text[lno] = string.rep(" ", padding) .. line
+	for lno, line in ipairs(text) do
+		text[lno] = string.rep(" ", padding) .. line
 	end
-	return self
+	return setmetatable({
+		text = text,
+	}, {
+		__index = self,
+	})
 end
 
 function Rendered:new(opts)
@@ -25,18 +30,26 @@ function Rendered:new(opts)
 	return new
 end
 
----@alias Highlight { fg: string|nil, bg: string|nil, style:string|nil}
+---@alias Highlight { fg: string|nil, bg: string|nil }
 ---@class Section
----@field contents fun(self: Section):string[]
----@field state table<string, any>
 ---@field interactive boolean Whether or not the section is interactive.
 ---@field hl string | Highlight | fun(self: Section):Highlight Highlight group to use for the section.
+---@field contents string[]|string|fun(self:Section):string[] The line or lines to be displayed
 local Section = {
+	---@type table<string, any>
 	state = {},
 	interactive = false,
 	hl = "Normal",
 }
 
+---@type fun(self: Section) Called when <CR> is entered with the cursor over a line in this section
+
+function Section:on_interact() end
+
+---@type fun(self: Section) Called once, when the component is initialized
+function Section:init() end
+
+---@type fun(self: Section):string[]
 function Section:contents()
 	return { "configure your veil!" }
 end
@@ -66,6 +79,7 @@ function Section:new(opts)
 	local hl_id = "VeilSection" .. math.floor(math.random() * 100)
 
 	-- Build the section and render function
+	mt.__index.contents = new.contents
 	mt.__index.interactive = new.interactive
 	mt.__index.hl = hl_id
 	mt.__index.hl_val = new.hl
@@ -81,12 +95,12 @@ function Section:new(opts)
 		veil.ns = vim.api.nvim_create_namespace("veil")
 		vim.api.nvim_set_hl(veil.ns, tbl.hl, hl_val)
 		local contents = nil
-		if type(new.contents) == "function" then
-			contents = new.contents(tbl)
-		elseif type(new.contents) == "table" then
-			contents = new.contents
-		elseif type(new.contents) == "string" then
-			contents = { new.contents }
+		if type(tbl.contents) == "function" then
+			contents = tbl:contents()
+		elseif type(tbl.contents) == "table" then
+			contents = tbl.contents
+		elseif type(tbl.contents) == "string" then
+			contents = { tbl.contents }
 		else
 			error("Section.contents must be a function, string[], or string", 2)
 		end
@@ -96,6 +110,7 @@ function Section:new(opts)
 			longest = utils.longest_line(contents),
 			virt = not tbl.interactive,
 			hl = tbl.hl,
+			interaction = tbl.interactions,
 		})
 	end
 

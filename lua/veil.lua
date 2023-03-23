@@ -1,9 +1,11 @@
 local veil = {}
 
-local veil_loaded = false
+veil.settings = {
+	mappings = {},
+}
 
-local function configure(opts)
-	return vim.tbl_deep_extend("force", require("veil.default"), opts)
+function veil.settings.configure(opts)
+	return vim.tbl_deep_extend("force", require("veil.default"), opts, veil.settings)
 end
 
 function veil.display(replace)
@@ -106,16 +108,26 @@ function veil.redraw(init)
 	vim.api.nvim_buf_set_option(veil.buf, "modifiable", false)
 end
 
+veil.state = {
+	open = false,
+	loaded = false,
+}
+
+function veil.map(lhs, rhs)
+	if not veil.buf then
+		veil.settings.mappings[lhs] = rhs
+	else
+		vim.api.nvim_buf_set_keymap(veil.buf, "n", lhs, rhs, {})
+	end
+end
+
 function veil.setup(opts)
-	if veil_loaded then
+	if veil.state.loaded then
 		return
 	end
-	veil_loaded = true
-	veil.settings = configure(opts)
+	veil.state.loaded = true
+	veil.settings = veil.settings.configure(opts)
 	veil.ns = vim.api.nvim_create_namespace("veil")
-	veil.state = {
-		open = false,
-	}
 
 	-- TODO: Do I really need this?
 	math.randomseed(os.time())
@@ -139,4 +151,5 @@ end
 return {
 	setup = veil.setup,
 	display = veil.display,
+	map = veil.map,
 }

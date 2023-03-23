@@ -18,10 +18,11 @@ function utils.empty(lines)
 	return empty
 end
 
-function utils.split_leading(string)
-	local leading_ws = string:match("^%s*")
-	local rest = string:match("^%s*(.*)")
-	return leading_ws, rest
+function utils.split_leading(str)
+	local len = #str
+	local s = str:gsub("^%s+", "")
+	local diff = len - #s - 1
+	return string.rep(" ", diff), s
 end
 
 return utils
