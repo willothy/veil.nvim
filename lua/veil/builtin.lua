@@ -33,7 +33,9 @@ end
 function builtin.sections.buttons(buttons, options)
 	local opts = options or {}
 	for _, button in ipairs(buttons) do
-		map(button.shortcut, button.callback)
+		if button.shortcut then
+			map(button.shortcut, button.callback)
+		end
 	end
 	return Section:new({
 		state = {
@@ -46,9 +48,8 @@ function builtin.sections.buttons(buttons, options)
 			local lines = {}
 			for _, button in ipairs(self.buttons) do
 				local s = string.format(
-					"[ %s ]%s%s  %s",
-					button.shortcut,
-					string.rep(" ", opts.spacing or 2),
+					"%s%s  %s",
+					button.shortcut and ("[ " .. button.shortcut .. " ]" .. string.rep(" ", opts.spacing or 2)) or "",
 					button.icon,
 					button.text
 				)
