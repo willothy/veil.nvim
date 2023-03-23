@@ -26,12 +26,12 @@ function Section:new(opts)
 			end
 		end,
 	}
-	mt.__index.interactive = new.interactive
-	mt.__index.render = function()
-		return new.contents(mt)
-	end
 
-	return setmetatable({}, mt)
+	local instance = {}
+	mt.__index.interactive = new.interactive
+	mt.__index.render = new.contents
+
+	return setmetatable(instance, mt)
 end
 
 return Section
