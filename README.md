@@ -38,6 +38,8 @@ https://user-images.githubusercontent.com/38540736/227207398-b8f7af6a-0e88-4874-
 {
     'willothy/veil.nvim',
     config = true,
+    lazy = true,
+    event = 'VimEnter',
     -- or configure with:
     -- opts = { ... }
 }
