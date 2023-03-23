@@ -2,9 +2,12 @@ local Section = require("veil.section")
 local utils = require("veil.utils")
 local map = require("veil").map
 
-local builtin = {}
+local builtin = {
+	sections = {},
+	headers = {},
+}
 
-function builtin.animated(frames, opts)
+function builtin.sections.animated(frames, opts)
 	return Section:new({
 		state = {
 			frames = frames,
@@ -27,7 +30,7 @@ function builtin.animated(frames, opts)
 	})
 end
 
-function builtin.buttons(buttons, options)
+function builtin.sections.buttons(buttons, options)
 	local opts = options or {}
 	for _, button in ipairs(buttons) do
 		map(button.shortcut, button.callback)
@@ -55,7 +58,7 @@ function builtin.buttons(buttons, options)
 	})
 end
 
-function builtin.padding(size)
+function builtin.sections.padding(size)
 	return Section:new({
 		contents = function()
 			return utils.empty(size)
@@ -63,5 +66,73 @@ function builtin.padding(size)
 		hl = "Normal",
 	})
 end
+
+builtin.headers.frames_veil1 = {
+	{
+		"-- Veil --",
+	},
+	{
+		"+- Veil --",
+	},
+	{
+		"++ Veil --",
+	},
+	{
+		"-+ Veil --",
+	},
+	{
+		"-- Veil ++",
+	},
+	{
+		"-- Veil -+",
+	},
+	{
+		"++ Veil --",
+	},
+	{
+		"-+ Veil --",
+	},
+}
+
+builtin.headers.frames_veil2 = {
+	{ "-- Veil --", "-- Veil --" },
+	{ "+- Veil --", "-- Veil -+" },
+	{ "++ Veil --", "-- Veil ++" },
+	{ "-+ Veil --", "-- Veil -+" },
+	{ "-- Veil ++", "++ Veil --" },
+	{ "-- Veil -+", "-+ Veil --" },
+	{ "++ Veil --", "-- Veil ++" },
+	{ "-+ Veil --", "-- Veil -+" },
+}
+
+builtin.headers.frames_nvim = {
+	{
+		[[  *                       _         *    ]],
+		[[        +                (_)  +          ]],
+		[[    _ __   ___  _____   ___ _ __ ___     ]],
+		[[   | '_ \ / _ \/ _ \ \ / / | '_ ` _ \    ]],
+		[[   | | | |  __/ (_) \ V /| | | | | | |   ]],
+		[[   |_| |_|\___|\___/ \_/ |_|_| |_| |_|   ]],
+		[[                              *          ]],
+	},
+	{
+		[[                  +       _              ]],
+		[[                         (_)      *      ]],
+		[[    _ __*  ___  _____   ___ _ __ ___     ]],
+		[[   | '_ \ / _ \/ _ \ \ / / | '_ ` _ \    ]],
+		[[   | | | |  __/ (_) \ V /| | | | | | |   ]],
+		[[   |_| |_|\___|\___/ \_/ |_|_| |_| |_|   ]],
+		[[                    +                    ]],
+	},
+	{
+		[[      *                   _     +        ]],
+		[[                         (_)        *    ]],
+		[[    _ __   ___  _+___   ___ _ __ ___     ]],
+		[[   | '_ \ / _ \/ _ \ \ / / | '_ ` _ \    ]],
+		[[   | | | |  __/ (_) \ V /| | | | | | |   ]],
+		[[   |_| |_|\___|\___/ \_/ |_|_| |_| |_|   ]],
+		[[            *                            ]],
+	},
+}
 
 return builtin
