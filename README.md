@@ -2,6 +2,7 @@
 
 A blazingly fast, animated, and infinitely customizeable startup / dashboard plugin
 
+> **Warning**    
 > Work in progress, there may be some bugs :)
 
 ## Features
@@ -22,7 +23,9 @@ A blazingly fast, animated, and infinitely customizeable startup / dashboard plu
 - [x] Shortcut mappings
 - [x] Startup in <1ms
 - [ ] Mouse events
-- [ ] Advanced rendering with [drawille](https://github.com/asciimoo/lua-drawille) (In-progress)
+- [ ] API for advanced rendering / terminal graphics
+  - [ ] Bundle drawille (temporary, in progress)
+  - [ ] Custom rendering API (to eventually replace drawille dependency)
 
 ## Demo (default config)
 
