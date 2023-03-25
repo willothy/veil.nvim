@@ -44,6 +44,13 @@ https://user-images.githubusercontent.com/38540736/227207398-b8f7af6a-0e88-4874-
     config = true,
     lazy = true,
     event = 'VimEnter',
+    dependencies = {
+		-- All optional, only required for the default setup.
+		-- If you customize your config, these aren't necessary.
+		"nvim-telescope/telescope.nvim",
+		"nvim-lua/plenary.nvim",
+		"nvim-telescope/telescope-file-browser.nvim"
+	}
     -- or configure with:
     -- opts = { ... }
 }
