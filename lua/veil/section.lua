@@ -36,12 +36,14 @@ end
 ---@class Section
 ---@field interactive boolean Whether or not the section is interactive.
 ---@field hl string | Highlight | fun(self: Section):Highlight Highlight group to use for the section.
+---@field focused_hl string | Highlight | fun(self: Section):Highlight HL for focused interactive section
 ---@field contents string[]|string|fun(self:Section):string[] The line or lines to be displayed
 local Section = {
 	---@type table<string, any>
 	state = {},
 	interactive = false,
 	hl = "Normal",
+	focused_hl = "Visual",
 }
 
 ---@type fun(self: Section) Called when <CR> is entered with the cursor over a line in this section
@@ -74,7 +76,9 @@ function Section:new(opts)
 	}
 
 	-- Generate random id for section hlgroup
-	local hl_id = "VeilSection" .. math.floor(math.random() * 100)
+	local sid = math.floor(math.random() * 100)
+	local hl_id = "VeilSection" .. sid
+	local focused_hl_id = "VeilSection" .. sid .. "F"
 
 	local instance = {}
 
@@ -84,10 +88,13 @@ function Section:new(opts)
 	mt.__index.on_interact = new.on_interact
 	mt.__index.hl = hl_id
 	mt.__index.hl_val = new.hl
+	mt.__index.focused_hl = focused_hl_id
+	mt.__index.focused_hl_val = new.focused_hl
 	---@type fun(tbl:Section):Rendered
 	mt.__index.render = function(tbl)
 		-- Create the new hlgroup
 		local hl_val
+		local focused_hl_val
 		if type(tbl.hl_val) == "function" then
 			hl_val = tbl:hl_val()
 		elseif type(tbl.hl_val) == "string" then
@@ -101,8 +108,22 @@ function Section:new(opts)
 		else
 			hl_val = tbl.hl_val
 		end
+		if type(tbl.focused_hl_val) == "function" then
+			focused_hl_val = tbl:focused_hl_val()
+		elseif type(tbl.focused_hl_val) == "string" then
+			focused_hl_val = {
+				fg = vim.fn.synIDattr(vim.fn.hlID(tbl.focused_hl_val), "fg"),
+				bg = vim.fn.synIDattr(vim.fn.hlID(tbl.focused_hl_val), "bg"),
+				bold = vim.fn.synIDattr(vim.fn.hlID(tbl.focused_hl_val), "bold") == 1,
+				italic = vim.fn.synIDattr(vim.fn.hlID(tbl.focused_hl_val), "italic") == 1,
+				underline = vim.fn.synIDattr(vim.fn.hlID(tbl.focused_hl_val), "underline") == 1,
+			}
+		else
+			focused_hl_val = tbl.focused_hl_val
+		end
 		veil.ns = vim.api.nvim_create_namespace("veil")
 		vim.api.nvim_set_hl(veil.ns, tbl.hl, hl_val)
+		vim.api.nvim_set_hl(veil.ns, tbl.focused_hl, focused_hl_val)
 		local contents = nil
 		if type(tbl.contents) == "function" then
 			contents = tbl:contents()
@@ -120,6 +141,7 @@ function Section:new(opts)
 			longest = utils.longest_line(contents),
 			virt = not tbl.interactive,
 			hl = tbl.hl,
+			focused_hl = tbl.focused_hl_val,
 			on_interact = new.on_interact ~= nil and function(relno, col)
 				instance:on_interact(relno, col)
 			end or nil,
