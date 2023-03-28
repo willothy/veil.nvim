@@ -10,6 +10,9 @@ A blazingly fast, animated, and infinitely customizeable startup / dashboard plu
 - [x] Animated sections rendered with virtual text
 - [x] Builtin "standard library"
   - [x] Buttons builtin
+  - [ ] Oldfiles builtin
+  - [ ] Current dir builtin
+  - [ ] Floating widget builtin
   - [x] Ascii frame anim builtin
   - [x] Vertical padding builtin
 - [x] Static text sections
