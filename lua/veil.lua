@@ -98,7 +98,7 @@ function veil.interact()
 end
 
 function veil.redraw(init)
-	locations.clear()
+	-- locations.clear()
 	veil.ns = vim.api.nvim_create_namespace("veil")
 	local utils = require("veil.utils")
 	local win_width = vim.api.nvim_win_get_width(veil.win)
@@ -123,6 +123,22 @@ function veil.redraw(init)
 	end
 	for id, section in ipairs(rendered) do
 		if not section.virt then
+			if
+				veil.loclist[id] ~= nil
+				and (
+					veil.loclist[id].startl ~= current_height
+					or veil.loclist[id].endl ~= current_height + section.nlines
+				)
+			then
+				vim.api.nvim_buf_set_lines(
+					veil.buf,
+					veil.loclist[id].startl,
+					veil.loclist[id].endl,
+					true,
+					utils.empty(veil.loclist[id].endl - veil.loclist[id].startl)
+				)
+				current_height = veil.loclist[id].startl
+			end
 			vim.api.nvim_buf_set_lines(veil.buf, current_height, -1, true, section.text)
 		else
 			local virt = {}
