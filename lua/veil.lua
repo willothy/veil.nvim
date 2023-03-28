@@ -5,7 +5,7 @@ veil.settings = {
 }
 
 function veil.settings.configure(opts)
-	return vim.tbl_deep_extend("force", require("veil.default"), opts, veil.settings)
+	return vim.tbl_deep_extend("force", require("veil.default"), veil.settings, opts)
 end
 
 function veil.display(replace)
@@ -16,12 +16,14 @@ function veil.display(replace)
 	if replace then
 		veil.buf = vim.api.nvim_get_current_buf()
 	else
-		veil.buf = vim.api.nvim_create_buf(false, true)
+		veil.buf = vim.api.nvim_create_buf(false, false)
 	end
 	vim.api.nvim_buf_set_option(veil.buf, "modifiable", false)
 	vim.api.nvim_buf_set_option(veil.buf, "bufhidden", "wipe")
 	vim.api.nvim_buf_set_option(veil.buf, "buftype", "nofile")
 	vim.api.nvim_buf_set_option(veil.buf, "swapfile", false)
+	vim.api.nvim_buf_set_option(veil.buf, "filetype", "veil")
+	vim.api.nvim_buf_set_option(veil.buf, "buflisted", false)
 	vim.api.nvim_buf_set_name(veil.buf, "Veil")
 	vim.api.nvim_set_current_buf(veil.buf)
 	veil.win = vim.api.nvim_get_current_win()
@@ -37,12 +39,6 @@ function veil.display(replace)
 		})
 	end
 
-	vim.api.nvim_create_autocmd("WinResized", {
-		buffer = veil.buf,
-		callback = function()
-			veil.redraw()
-		end,
-	})
 	vim.api.nvim_create_autocmd({ "BufUnload", "BufDelete", "BufWipeout" }, {
 		buffer = veil.buf,
 		callback = function()
