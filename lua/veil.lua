@@ -98,6 +98,7 @@ function veil.interact()
 end
 
 function veil.redraw(init)
+	local cursor = vim.api.nvim_win_get_cursor(veil.win)
 	-- locations.clear()
 	veil.ns = vim.api.nvim_create_namespace("veil")
 	local utils = require("veil.utils")
@@ -159,6 +160,7 @@ function veil.redraw(init)
 		current_height = current_height + section.nlines
 	end
 	vim.api.nvim_buf_set_option(veil.buf, "modifiable", false)
+	vim.api.nvim_win_set_cursor(veil.win, cursor)
 end
 
 veil.state = {
