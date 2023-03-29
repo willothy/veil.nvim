@@ -125,22 +125,29 @@ function veil:setup_buffer(replace)
 
 	vim.api.nvim_create_autocmd({ "WinEnter" }, {
 		group = group,
-		-- pattern = "*",
-		buffer = self.buf,
-		once = true,
-		callback = function()
-			vim.cmd("setlocal guicursor=a:VeilCursor")
+		pattern = "*",
+		-- buffer = self.buf,
+		-- once = true,
+		callback = function(v)
+			if v.buf ~= self.buf then
+				vim.cmd("setlocal guicursor=" .. self.state.guicursor)
+				require("veil.compat").noice(false)
+			else
+				vim.cmd("setlocal guicursor=a:VeilCursor")
+				require("veil.compat").noice(true)
+			end
 		end,
 	})
 
-	vim.api.nvim_create_autocmd({ "BufWinLeave" }, {
+	vim.api.nvim_create_autocmd({ "BufWinLeave", "WinLeave", "WinNew" }, {
 		group = group,
 		-- pattern = "*",
 		buffer = self.buf,
-		once = true,
+		-- once = true,
 		callback = function()
-			veil:reset()
+			-- veil:reset()
 			vim.cmd("setlocal guicursor=" .. self.state.guicursor)
+			require("veil.compat").noice(false)
 		end,
 	})
 
@@ -185,7 +192,7 @@ function veil:display(replace)
 	self:setup_mappings()
 
 	-- Required to hide the cursor when folke/noice.nvim is installed
-	require("veil.compat").noice()
+	require("veil.compat").noice(true)
 
 	vim.cmd("setlocal nonu nornu")
 
@@ -196,6 +203,8 @@ function veil:display(replace)
 		buffer = self.buf,
 		callback = function()
 			self.state.open = false
+			-- Required to hide the cursor when folke/noice.nvim is installed
+			require("veil.compat").noice(true)
 
 			return true
 		end,
@@ -329,6 +338,7 @@ function veil.setup(opts)
 
 	if veil.settings.startup then
 		vim.api.nvim_create_autocmd("BufEnter", {
+			once = true,
 			callback = function()
 				if vim.fn.argc() == 0 then
 					veil:display(true)
