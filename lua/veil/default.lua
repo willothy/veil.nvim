@@ -43,6 +43,7 @@ local default = {
 				end,
 			},
 		}, { spacing = 6 }),
+		builtin.sections.oldfiles(),
 		-- builtin.sections.padding(3),
 	},
 	selection = {
