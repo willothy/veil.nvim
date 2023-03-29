@@ -8,6 +8,7 @@ local Rendered = {
 	hl = "Normal",
 	on_interact = nil,
 	super = nil,
+	int_start = 1,
 }
 
 function Rendered:pad(width)
@@ -34,6 +35,7 @@ end
 ---@alias Highlight { fg: string|nil, bg: string|nil }
 ---@class Section
 ---@field interactive boolean Whether or not the section is interactive.
+---@field header_size number Skip the first n lines of section when moving vcursor (for titles)
 ---@field hl string | Highlight | fun(self: Section):Highlight Highlight group to use for the section.
 ---@field focused_hl string | Highlight | fun(self: Section):Highlight HL for focused interactive section
 ---@field contents string[]|string|fun(self:Section):string[] The line or lines to be displayed
@@ -41,8 +43,6 @@ local Section = {
 	---@type table<string, any>
 	state = {},
 	interactive = false,
-	hl = "Normal",
-	focused_hl = "Visual",
 }
 
 ---@type fun(self: Section) Called when <CR> is entered with the cursor over a line in this section
@@ -84,25 +84,25 @@ function Section:new(opts)
 	-- Build the section and render function
 	mt.__index.contents = new.contents
 	mt.__index.interactive = new.interactive
+	mt.__index.interaction_start = (opts.header_size or 0) + 1
 	mt.__index.on_interact = new.on_interact
 	mt.__index.hl = hl_id
-	mt.__index.hl_val = new.hl
+	mt.__index.hl_val = new.hl or "Normal"
 	mt.__index.focused_hl = focused_hl_id
-	mt.__index.focused_hl_val = new.focused_hl
+	mt.__index.focused_hl_val = new.focused_hl or "Visual"
 	---@type fun(tbl:Section):Rendered
 	mt.__index.render = function(tbl)
 		-- Create the new hlgroup
 		local function eval(hl)
 			if type(hl) == "function" then
-				return hl(tbl)
+				local hlfn = hl(tbl)
+				if type(hlfn) == "string" then
+					return vim.api.nvim_get_hl_by_name(hlfn, true)
+				else
+					return hlfn
+				end
 			elseif type(hl) == "string" then
-				return {
-					fg = vim.fn.synIDattr(vim.fn.hlID(hl), "fg"),
-					bg = vim.fn.synIDattr(vim.fn.hlID(hl), "bg"),
-					bold = vim.fn.synIDattr(vim.fn.hlID(hl), "bold") == 1,
-					italic = vim.fn.synIDattr(vim.fn.hlID(hl), "italic") == 1,
-					underline = vim.fn.synIDattr(vim.fn.hlID(hl), "underline") == 1,
-				}
+				return vim.api.nvim_get_hl_by_name(hl, true)
 			else
 				return hl
 			end
@@ -113,7 +113,7 @@ function Section:new(opts)
 			veil.ns = vim.api.nvim_create_namespace("veil")
 		end
 		vim.api.nvim_set_hl(veil.ns, tbl.hl, eval(tbl.hl_val))
-		vim.api.nvim_set_hl(veil.ns, tbl.focused_hl, eval(tbl.focused_hl_val))
+		vim.api.nvim_set_hl(veil.ns, focused_hl_id, eval(tbl.focused_hl_val))
 
 		local contents = nil
 		if type(tbl.contents) == "function" then
@@ -132,10 +132,11 @@ function Section:new(opts)
 			longest = utils.longest_line(contents),
 			virt = not tbl.interactive,
 			hl = tbl.hl,
-			focused_hl = tbl.focused_hl_val,
+			focused_hl = vim.api.nvim_get_hl_id_by_name(focused_hl_id),
 			on_interact = new.on_interact ~= nil and function(relno, col)
 				instance:on_interact(relno, col)
 			end or nil,
+			int_start = (new.header_size or 0) + 1,
 		})
 	end
 

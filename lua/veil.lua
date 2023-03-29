@@ -10,7 +10,24 @@ local veil = {
 		vcursor = 0,
 		height = 0,
 	},
+	win = nil,
+	buf = nil,
 }
+
+---@return table veil.state
+function veil.get_state()
+	return veil.state
+end
+
+---@return bufnr veil.buf
+function veil.get_buf()
+	return veil.buf
+end
+
+---@return winnr veil.win
+function veil.get_win()
+	return veil.win
+end
 
 function veil:configure(opt)
 	local opts = vim.tbl_deep_extend("force", require("veil.default"), opt or {})
@@ -54,6 +71,9 @@ function veil:move(dir)
 		end
 		if loc ~= nil and loc.interactive then
 			self.state.vcursor = self.state.vcursor - count
+			if loc.int_start > 1 and veil:section_offset(self.loclist[idx]) < loc.int_start then
+				self.state.vcursor = self.state.vcursor - loc.int_start + 1
+			end
 			return true
 		end
 	else
@@ -68,6 +88,9 @@ function veil:move(dir)
 		end
 		if loc ~= nil and loc.interactive then
 			self.state.vcursor = self.state.vcursor + count
+			if loc.int_start > 1 and veil:section_offset(self.loclist[idx]) < loc.int_start then
+				self.state.vcursor = self.state.vcursor + loc.int_start - 1
+			end
 			return true
 		end
 	end
@@ -117,6 +140,7 @@ function veil:setup_buffer(replace)
 
 	local hl = vim.api.nvim_get_hl_by_name("Cursor", true)
 	hl.blend = 100
+
 	vim.api.nvim_set_hl(veil.ns, "VeilCursor", hl)
 	vim.api.nvim_set_hl(veil.ns, "Cursor", hl)
 
@@ -275,25 +299,26 @@ function veil:redraw(init)
 			local focused = (not section.virt) and (self.state.vcursor == current_height + i)
 			local sep = self.settings.selection.separators
 			if focused then
-				local fhl = vim.fn.hlID(section.focused_hl)
+				local fhl = vim.api.nvim_get_hl_by_id(section.focused_hl, true)
 				local inv_hl = {
-					fg = vim.fn.synIDattr(fhl, "bg"),
+					fg = fhl.guibg or fhl.bg or fhl.background,
 					bg = "none",
 				}
 				vim.api.nvim_set_hl(0, section.focused_hl .. "Inv", inv_hl)
 			end
-			table.insert(virt, {
-				{ leading, "Normal" },
-				{ focused and sep.left or " ", focused and section.focused_hl .. "Inv" or "Normal" },
-				{ rest, focused and section.focused_hl or section.hl },
-				{ focused and sep.right or " ", focused and section.focused_hl .. "Inv" or "Normal" },
-			})
-		end
-		for i, line in ipairs(virt) do
-			if #line ~= 2 then
-				virt[i][3][1] = line[3][1] .. string.rep(" ", math.max(max_width - #line[3][1], 0))
+			if #rest > 0 then
+				table.insert(virt, {
+					{ leading, "Normal" },
+					{ focused and sep.left or " ", focused and section.focused_hl .. "Inv" or "Normal" },
+					{ rest, focused and section.focused_hl or section.hl },
+					{ focused and sep.right or " ", focused and section.focused_hl .. "Inv" or "Normal" },
+				})
 			else
-				virt[i][2][1] = line[2][1] .. string.rep(" ", math.max(max_width - #line[2][1], 0))
+				table.insert(virt, {
+					{ leading, "Normal" },
+					-- { focused and sep.left or " ", focused and section.focused_hl .. "Inv" or "Normal" },
+					-- { focused and sep.right or " ", focused and section.focused_hl .. "Inv" or "Normal" },
+				})
 			end
 		end
 
@@ -309,6 +334,7 @@ function veil:redraw(init)
 			nlines = section.nlines,
 			handle = section,
 			interactive = not section.virt,
+			int_start = section.int_start,
 		}
 
 		current_height = current_height + section.nlines
@@ -364,5 +390,14 @@ return {
 	move = {
 		up = up,
 		down = down,
+	},
+	api = {
+		move = {
+			up = up,
+			down = down,
+		},
+		get_buf = veil.get_buf,
+		get_win = veil.get_win,
+		get_state = veil.get_state,
 	},
 }
