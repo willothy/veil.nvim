@@ -191,21 +191,6 @@ function veil:display(replace)
 
 	local group = vim.api.nvim_create_augroup("veilgroup", { clear = true })
 
-	vim.api.nvim_create_autocmd("WinResized", {
-		group = group,
-		callback = function(v)
-			-- handle resize
-			if veil.state.open then
-				local section, idx = veil:section_at_cursor()
-				if not idx or not section then
-					return
-				end
-
-				local start = section.startl
-			end
-		end,
-	})
-
 	vim.api.nvim_create_autocmd({ "BufUnload", "BufDelete", "BufWipeout" }, {
 		group = group,
 		buffer = self.buf,
