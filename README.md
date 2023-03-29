@@ -2,7 +2,7 @@
 
 A blazingly fast, animated, and infinitely customizeable startup / dashboard plugin
 
-> **Warning**    
+> **Warning**  
 > Work in progress, there may be some bugs :)
 
 ## Features
@@ -20,8 +20,8 @@ A blazingly fast, animated, and infinitely customizeable startup / dashboard plu
   - [x] Per-section state
 - [x] Simple and extensible API
 - [x] Interactible components (use buttons with `<CR>`)
-  - [ ] Cursor 'hover' events
-  - [ ] Lock cursor to menus
+  - [x] Cursor 'hover' events
+  - [x] Lock cursor to menus
 - [x] Highlighting
 - [x] Shortcut mappings
 - [x] Startup in <1ms
@@ -43,19 +43,18 @@ https://user-images.githubusercontent.com/38540736/227207398-b8f7af6a-0e88-4874-
 
 ```lua
 {
-    'willothy/veil.nvim',
-    config = true,
-    lazy = true,
-    event = 'VimEnter',
-    dependencies = {
-		-- All optional, only required for the default setup.
-		-- If you customize your config, these aren't necessary.
-		"nvim-telescope/telescope.nvim",
-		"nvim-lua/plenary.nvim",
-		"nvim-telescope/telescope-file-browser.nvim"
-	}
-    -- or configure with:
-    -- opts = { ... }
+  'willothy/veil.nvim',
+  lazy = true,
+  dependencies = {
+    -- All optional, only required for the default setup.
+    -- If you customize your config, these aren't necessary.
+    "nvim-telescope/telescope.nvim",
+    "nvim-lua/plenary.nvim",
+    "nvim-telescope/telescope-file-browser.nvim"
+  }
+  config = true,
+  -- or configure with:
+  -- opts = { ... }
 }
 ```
 
@@ -73,51 +72,50 @@ The defaults assume you have Telescope installed because... you probably do.<br/
 local builtin = require("veil.builtin")
 
 local default = {
-	sections = {
-		builtin.sections.animated(builtin.headers.frames_nvim, {
-			hl = { fg = "#5de4c7" },
-		}),
-		builtin.sections.padding(2),
-		builtin.sections.buttons({
-			{
-				icon = "",
-				text = "Find Files",
-				shortcut = "f",
-				callback = function()
-					require("telescope.builtin").find_files()
-				end,
-			},
-			{
-				icon = "",
-				text = "Find Word",
-				shortcut = "w",
-				callback = function()
-					require("telescope.builtin").live_grep()
-				end,
-			},
-			{
-				icon = "",
-				text = "Buffers",
-				shortcut = "b",
-				callback = function()
-					require("telescope.builtin").buffers()
-				end,
-			},
-			{
-				icon = "",
-				text = "Config",
-				shortcut = "c",
-				callback = function()
-					require("telescope").extensions.file_browser.file_browser({
-						path = vim.fn.stdpath("config"),
-					})
-				end,
-			},
-		}),
-		builtin.sections.padding(3),
-	},
-	mappings = {},
-	startup = true,
+  sections = {
+    builtin.sections.animated(builtin.headers.frames_nvim, {
+      hl = { fg = "#5de4c7" },
+    }),
+    builtin.sections.buttons({
+      {
+        icon = "",
+        text = "Find Files",
+        shortcut = "f",
+        callback = function()
+            require("telescope.builtin").find_files()
+        end,
+      },
+      {
+        icon = "",
+        text = "Find Word",
+        shortcut = "w",
+        callback = function()
+            require("telescope.builtin").live_grep()
+        end,
+      },
+      {
+        icon = "",
+        text = "Buffers",
+        shortcut = "b",
+        callback = function()
+            require("telescope.builtin").buffers()
+        end,
+      },
+      {
+        icon = "",
+        text = "Config",
+        shortcut = "c",
+        callback = function()
+          require("telescope").extensions.file_browser.file_browser({
+            path = vim.fn.stdpath("config"),
+          })
+        end,
+      },
+    }),
+  },
+  mappings = {},
+  startup = true,
+  listed = false
 }
 
 ```
