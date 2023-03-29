@@ -6,7 +6,7 @@ local default = {
 		builtin.sections.animated(builtin.headers.frames_nvim, {
 			hl = { fg = "#5de4c7" },
 		}),
-		builtin.sections.padding(2),
+		-- builtin.sections.padding(2),
 		builtin.sections.buttons({
 			{
 				icon = "",
@@ -43,10 +43,17 @@ local default = {
 				end,
 			},
 		}, { spacing = 6 }),
-		builtin.sections.padding(3),
+		-- builtin.sections.padding(3),
+	},
+	selection = {
+		separators = {
+			left = "",
+			right = "",
+		},
 	},
 	mappings = {},
 	startup = true,
+	listed = false,
 }
 
 return default

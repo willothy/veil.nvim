@@ -61,6 +61,7 @@ function builtin.sections.buttons(buttons, options)
 			return lines
 		end,
 		hl = opts.hl or "Normal",
+		focused_hl = opts.focused_hl or "Visual",
 		interactive = true,
 	})
 end
