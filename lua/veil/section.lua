@@ -1,146 +1,145 @@
-local utils = require("veil.utils")
+local fn = vim.fn
+local hl_id = fn.hlID
+local hl_attr = fn.synIDattr
 
-local Rendered = {
-	text = {},
-	nlines = 0,
-	longest = 0,
-	virt = true,
+local noop = function() end
+
+local Highlight = {
+	---@type string Hex color
+	fg = hl_attr(hl_id("Normal"), "fg", "gui"),
+	---@type string Hex color
+	bg = hl_attr(hl_id("Normal"), "bg", "gui"),
+	bold = false,
+	italic = false,
+	underline = false,
+}
+
+---@class Chunk
+local Chunk = {
+	---@type string
+	text = "",
+	---@type string|Highlight Highlight group or highlight table
 	hl = "Normal",
-	on_interact = nil,
-	super = nil,
-	int_start = 1,
 }
 
-function Rendered:pad(width)
-	local text = vim.deepcopy(self.text)
-	local padding = 0
-	if self.longest < width and self.longest > 0 then
-		padding = math.ceil((width - self.longest) / 2)
-	end
-	for lno, line in ipairs(text) do
-		text[lno] = string.rep(" ", padding) .. line
-	end
-	return setmetatable({
-		text = text,
-	}, {
-		__index = self,
-	})
-end
-
-function Rendered:new(opts)
-	local new = vim.tbl_deep_extend("keep", opts or {}, self)
-	return new
-end
-
----@alias Highlight { fg: string|nil, bg: string|nil }
 ---@class Section
----@field interactive boolean Whether or not the section is interactive.
----@field header_size number Skip the first n lines of section when moving vcursor (for titles)
----@field hl string | Highlight | fun(self: Section):Highlight Highlight group to use for the section.
----@field focused_hl string | Highlight | fun(self: Section):Highlight HL for focused interactive section
----@field contents string[]|string|fun(self:Section):string[] The line or lines to be displayed
-local Section = {
-	---@type table<string, any>
-	state = {},
-	interactive = false,
+---@field title? Chunk | fun(self: Section): Chunk
+---Content provider, can be a function, Line, or list of lines
+---This should be used to generate content, not to update state
+---@field content Line | Line[] | fun(self: Section): Line | Line[]
+---Called once, when the section is first created
+---@field init? fun(self: Section)
+---Whether or not the section should update
+---If false, the section will only be updated on init, or when the user interacts with it
+---Will always be false when content is not a function
+---@field should_update boolean | fun(self: Section): boolean
+---Called when the section should update
+---This should be used to update state
+---@field update fun(self: Section)
+---Persistent state table, the only part of the section that can be mutated at runtime
+---Will be created regardless of whether it is initialized in `init` or `Section:new()`
+---@field state? table
+---Whether or not the section is interactive
+---@field interactive? boolean
+---Called when the user interacts with the section with <CR>
+---@field interact? fun(self: Section, offset: integer)
+---@field index? integer The index of the section in the stack
+---The cursor relative to the focused section (interactive only)
+---Whether the section is focused
+---@field focused? boolean
+---Will be -1 if the section is not focused
+---@field focus_offset integer
+local Section = {}
+Section.content = { text = "Override this", hl = "Normal" }
+Section.interact = noop
+Section.init = noop
+Section.update = noop
+Section.should_update = false
+Section.interactive = false
+Section.focused = false
+Section.focus_offset = -1
+
+local mutable = {
+	state = true,
+	focused = true,
+	focused_offset = true,
 }
-
----@type fun(self: Section) Called when <CR> is entered with the cursor over a line in this section
-
-function Section:on_interact() end
-
----@type fun(self: Section) Called once, when the component is initialized
-function Section:init() end
-
----@type fun(self: Section):string[]
-function Section:contents()
-	return { "configure your veil!" }
+local only_allow_state_change = function(tbl, k, v)
+	if mutable[k] then
+		rawset(tbl, k, v)
+	else
+		vim.api.nvim_err_writeln("Can only mutate `section.state` after initialization, attempted to mutate " .. k)
+	end
 end
 
----@alias SectionOpts Section
----@type fun(opts: table):Section
-function Section:new(opts)
-	local new = vim.tbl_deep_extend("force", self, opts)
-
-	local mt = {
-		__index = new.state,
-		__newindex = function(state, k, v)
-			-- Reserved names
-			if k == "interactive" or k == "contents" then
-				error("Section." .. k .. " cannot be updated after initialization", 2)
-			else
-				rawset(state, k, v)
-			end
+---@param init boolean Whether to call the init function
+function Section:render(init)
+	if init then
+		self:init()
+		if self.title ~= nil and type(self.title) == "function" then
+			rawset(self, "title", self:title())
+		end
+	end
+	local should_update = self.should_update
+	if type(self.should_update) == "function" then
+		should_update = self:should_update()
+	else
+		should_update = self.should_update
+	end
+	if init or self.focused or should_update then
+		self:update()
+	end
+	local title = self.title
+	---@type Line | Line[]
+	local content
+	if type(self.content) == "function" then
+		content = self:content()
+	else
+		content = self.content
+	end
+	local nlines = 1
+	if vim.tbl_islist(content) then
+		nlines = #content
+	else
+		content = { { content } }
+	end
+	rawset(self, "nlines", nlines)
+	return {
+		-- nil title will be handled in Veil:redraw()
+		title = title,
+		content = content,
+		nlines = nlines,
+		interactive = self.interactive,
+		interact = function(...)
+			self:interact(...)
 		end,
 	}
+end
 
-	-- Generate random id for section hlgroup
-	local sid = math.floor(math.random() * 100)
-	local hl_id = "VeilSection" .. sid
-	local focused_hl_id = "VeilSection" .. sid .. "F"
-
+---@param self Section Base class
+---@param proto Section|table Section prototype / config
+---@return Section instance The new instance
+function Section:new(proto, idx)
 	local instance = {}
-
-	-- Build the section and render function
-	mt.__index.contents = new.contents
-	mt.__index.interactive = new.interactive
-	mt.__index.interaction_start = (opts.header_size or 0) + 1
-	mt.__index.on_interact = new.on_interact
-	mt.__index.hl = hl_id
-	mt.__index.hl_val = new.hl or "Normal"
-	mt.__index.focused_hl = focused_hl_id
-	mt.__index.focused_hl_val = new.focused_hl or "Visual"
-	---@type fun(tbl:Section):Rendered
-	mt.__index.render = function(tbl)
-		-- Create the new hlgroup
-		local function eval(hl)
-			if type(hl) == "function" then
-				local hlfn = hl(tbl)
-				if type(hlfn) == "string" then
-					return vim.api.nvim_get_hl_by_name(hlfn, true)
-				else
-					return hlfn
-				end
-			elseif type(hl) == "string" then
-				return vim.api.nvim_get_hl_by_name(hl, true)
-			else
-				return hl
-			end
-		end
-
-		local veil = require("veil")
-		if not veil.ns then
-			veil.ns = vim.api.nvim_create_namespace("veil")
-		end
-		vim.api.nvim_set_hl(veil.ns, tbl.hl, eval(tbl.hl_val))
-		vim.api.nvim_set_hl(veil.ns, focused_hl_id, eval(tbl.focused_hl_val))
-
-		local contents = nil
-		if type(tbl.contents) == "function" then
-			contents = tbl:contents()
-		elseif type(tbl.contents) == "table" then
-			contents = tbl.contents
-		elseif type(tbl.contents) == "string" then
-			contents = { tbl.contents }
-		else
-			vim.api.nvim_err_writeln("Section.contents must be a function, string[], or string")
-		end
-
-		return Rendered:new({
-			text = contents,
-			nlines = #contents,
-			longest = utils.longest_line(contents),
-			virt = not tbl.interactive,
-			hl = tbl.hl,
-			focused_hl = vim.api.nvim_get_hl_id_by_name(focused_hl_id),
-			on_interact = new.on_interact ~= nil and function(relno, col)
-				instance:on_interact(relno, col)
-			end or nil,
-			int_start = (new.header_size or 0) + 1,
-		})
+	if proto ~= nil then
+		instance.state = proto.state or {}
+		instance.title = proto.title
+		instance.content = proto.content
+		instance.update = proto.update
+		instance.should_update = proto.should_update
+		instance.interact = proto.interact
+		instance.interactive = proto.interactive
+		instance.init = proto.init
+	else
+		-- New state should always be created
+		-- Never mutate the original state
+		instance.state = {}
 	end
-
-	return setmetatable(instance, mt)
+	instance.index = idx
+	return setmetatable(instance, {
+		__index = self,
+		__newindex = only_allow_state_change,
+	})
 end
 
 return Section

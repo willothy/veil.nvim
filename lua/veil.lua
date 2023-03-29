@@ -1,246 +1,122 @@
-local veil = {
-	loclist = {},
-	settings = {
-		mappings = {},
+local api = vim.api
+local Section = require("veil.section")
+
+local autocmd = vim.api.nvim_create_autocmd
+
+---@class Veil Veil state singleton
+local Veil = {}
+
+---@class Config
+---@field sections Section[]
+---@field mappings table<Keymap, fun()>
+---@field startup boolean Whether to open Veil on startup (only applies if argc == 0)
+---@field center { horizontal: boolean, vertical: boolean } Whether to center the window vertically/horizontally
+Veil.config = require("veil.default")
+
+---@class State
+Veil.state = {
+	---@type Section[] The list of generated sections
+	stack = {},
+	current = {
+		---@type integer cursor location (y-axis)
+		cursor = 1,
 	},
-	state = {
-		open = false,
-		loaded = false,
-		resized = false,
-		vcursor = 0,
+	---@type boolean Whether the Veil window is open
+	open = false,
+	---@type boolean Whether Veil has been loaded
+	loaded = false,
+	height = 0,
+	window = {
+		---@type window Window id
+		id = nil,
+		---@type integer Width of the Veil window
+		width = 0,
+		---@type integer Height of the Veil window
 		height = 0,
 	},
-	win = nil,
-	buf = nil,
+	---@type buffer? Buffer number
+	buffer = nil,
+	ns = api.nvim_create_namespace("veil"),
+	---@type timer UV Timer for updates
+	timer = nil,
 }
 
----@return table veil.state
-function veil.get_state()
-	return veil.state
-end
-
----@return bufnr veil.buf
-function veil.get_buf()
-	return veil.buf
-end
-
----@return winnr veil.win
-function veil.get_win()
-	return veil.win
-end
-
-function veil:configure(opt)
-	local opts = vim.tbl_deep_extend("force", require("veil.default"), opt or {})
-	self.settings.sections = opts.sections or {}
-	self.settings.mappings = vim.tbl_deep_extend("keep", self.settings.mappings, opts.mappings or {})
-	self.settings.listed = opts.listed
-	self.settings.startup = opts.startup
-	self.settings.selection = opts.selection
-end
-
-function veil:reset()
-	self.state.open = false
-	self.state.resized = false
-	self.state.vcursor = 0
-	self.state.height = 0
-end
-
-function veil:section_at_cursor()
-	return self.loclist:find(self.state.vcursor)
-end
-
-function veil:section_offset(section)
-	if not section then
-		return nil
-	end
-	local start = section.startl
-	return math.max(self.state.vcursor - start, 1)
-end
-
-function veil:move(dir)
-	local count = math.max(vim.v.count, 1)
-	if dir == "up" then
-		local loc, idx = self.loclist:find(self.state.vcursor - count)
-		if not idx then
-			return
-		end
-		while idx >= 1 and loc ~= nil and not loc.interactive do
-			count = count + loc.nlines
-			idx = idx - 1
-			loc = self.loclist[idx]
-		end
-		if loc ~= nil and loc.interactive then
-			self.state.vcursor = self.state.vcursor - count
-			if loc.int_start > 1 and veil:section_offset(self.loclist[idx]) < loc.int_start then
-				self.state.vcursor = self.state.vcursor - loc.int_start + 1
-			end
-			return true
-		end
-	else
-		local loc, idx = self.loclist:find(self.state.vcursor + count)
-		if not idx then
-			return
-		end
-		while idx < #self.loclist and loc ~= nil and not loc.interactive do
-			count = count + loc.nlines
-			idx = idx + 1
-			loc = self.loclist[idx]
-		end
-		if loc ~= nil and loc.interactive then
-			self.state.vcursor = self.state.vcursor + count
-			if loc.int_start > 1 and veil:section_offset(self.loclist[idx]) < loc.int_start then
-				self.state.vcursor = self.state.vcursor + loc.int_start - 1
-			end
-			return true
-		end
-	end
-	return false
-end
-
-local function up()
-	if veil:move("up") then
-		veil:redraw()
-	end
-end
-
-local function down()
-	if veil:move("down") then
-		veil:redraw()
-	end
-end
-
-function veil.loclist:clear()
-	for i, _ in ipairs(self) do
-		table.remove(self, i)
-	end
-end
-
-function veil.loclist:find(line)
-	for idx, loc in ipairs(self) do
-		if line > loc.startl and line <= loc.endl then
-			return loc, idx
-		end
-	end
-	return nil
-end
-
-function veil:setup_buffer(replace)
+function Veil:init_buf(replace)
+	local buf
 	if replace then
-		self.buf = vim.api.nvim_get_current_buf()
+		buf = api.nvim_get_current_buf()
 	else
-		self.buf = vim.api.nvim_create_buf(self.settings.listed, false)
+		buf = api.nvim_create_buf(false, false)
 	end
-	vim.api.nvim_buf_set_option(self.buf, "bufhidden", "wipe")
-	vim.api.nvim_buf_set_option(self.buf, "buftype", "nofile")
-	vim.api.nvim_buf_set_option(self.buf, "swapfile", false)
-	vim.api.nvim_buf_set_option(self.buf, "filetype", "veil")
-	vim.api.nvim_buf_set_name(self.buf, "Veil")
-	vim.api.nvim_set_hl_ns(self.ns)
-	vim.api.nvim_set_current_buf(self.buf)
+	local win = vim.api.nvim_get_current_win()
+	local opt = function(option, val)
+		api.nvim_buf_set_option(buf, option, val)
+	end
 
-	local hl = vim.api.nvim_get_hl_by_name("Cursor", true)
-	hl.blend = 100
+	opt("buftype", "nofile")
+	opt("filetype", "veil")
+	opt("swapfile", false)
+	opt("bufhidden", "wipe")
+	opt("buflisted", false)
 
-	vim.api.nvim_set_hl(veil.ns, "VeilCursor", hl)
-	vim.api.nvim_set_hl(veil.ns, "Cursor", hl)
+	self.state.buffer = buf
+	self.state.window.id = win
+	self.state.window.width = api.nvim_win_get_width(win)
+	self.state.window.height = api.nvim_win_get_height(win)
+	if not self.state.ns then
+		self.state.ns = api.nvim_create_namespace("veil")
+	end
+	api.nvim_win_set_hl_ns(win, self.state.ns)
 
-	local group = vim.api.nvim_create_augroup("VeilCursorGroup", { clear = true })
-	vim.cmd("setlocal guicursor=a:VeilCursor")
-
-	vim.api.nvim_create_autocmd({ "WinEnter" }, {
-		group = group,
-		pattern = "*",
-		-- buffer = self.buf,
-		-- once = true,
-		callback = function(v)
-			if v.buf ~= self.buf then
-				vim.cmd("setlocal guicursor=" .. self.state.guicursor)
-				require("veil.compat").noice(false)
-			else
-				vim.cmd("setlocal guicursor=a:VeilCursor")
-				require("veil.compat").noice(true)
-			end
-		end,
-	})
-
-	vim.api.nvim_create_autocmd({ "BufWinLeave", "WinLeave", "WinNew" }, {
-		group = group,
-		-- pattern = "*",
-		buffer = self.buf,
-		-- once = true,
+	autocmd("WinResized", {
+		buffer = buf,
 		callback = function()
-			-- veil:reset()
-			vim.cmd("setlocal guicursor=" .. self.state.guicursor)
-			require("veil.compat").noice(false)
+			self.state.window.width = api.nvim_win_get_width(win)
+			self.state.window.height = api.nvim_win_get_height(win)
+			self:kill_loop()
+			self:init_loop()
 		end,
 	})
 
-	vim.api.nvim_set_current_buf(self.buf)
-end
-
-function veil:setup_window()
-	self.win = vim.api.nvim_get_current_win()
-	self.state.height = vim.api.nvim_win_get_height(self.win)
-	vim.api.nvim_buf_set_lines(self.buf, 0, -1, true, require("veil.utils").empty(self.state.height))
-	vim.api.nvim_buf_set_option(self.buf, "modifiable", false)
-
-	vim.api.nvim_win_set_hl_ns(self.win, self.ns)
-
-	vim.wo[self.win].wrap = false
-end
-
-function veil:setup_mappings()
-	vim.keymap.set("n", "<CR>", self.interact, { buffer = self.buf, noremap = true })
-	vim.keymap.set("n", "j", down, { buffer = self.buf, noremap = true })
-	vim.keymap.set("n", "<Down>", down, { buffer = self.buf, noremap = true })
-	vim.keymap.set("n", "k", up, { buffer = self.buf, noremap = true })
-	vim.keymap.set("n", "<Up>", up, { buffer = self.buf, noremap = true })
-
-	for map, cmd in pairs(self.settings.mappings) do
-		vim.keymap.set("n", map, cmd, {
-			silent = true,
-			buffer = self.buf,
-		})
-	end
-end
-
-function veil:display(replace)
-	if self.state.open == true then
-		return
-	else
-		veil:reset()
-	end
-
-	self:setup_buffer(replace)
-	veil:setup_window()
-	self:setup_mappings()
-
-	-- Required to hide the cursor when folke/noice.nvim is installed
-	require("veil.compat").noice(true)
-
+	-- vim.wo[win].number = false
+	-- vim.wo[win].relativenumber = false
+	-- vim.wo[win].signcolumn = "no"
+	-- vim.wo[win].cursorline = false
+	-- vim.wo[win].cursorcolumn = false
+	-- vim.wo[win].colorcolumn = ""
+	--  vim.bo[buf].
+	api.nvim_set_current_buf(buf)
 	vim.cmd("setlocal nonu nornu")
+	local empty = {}
+	for i = 1, self.state.window.height do
+		empty[i] = ""
+	end
+	api.nvim_buf_set_lines(buf, 0, -1, true, empty)
+	opt("modifiable", false)
+	self.state.open = true
 
-	local group = vim.api.nvim_create_augroup("veilgroup", { clear = true })
-
-	vim.api.nvim_create_autocmd({ "BufUnload", "BufDelete", "BufWipeout" }, {
-		group = group,
-		buffer = self.buf,
+	autocmd({ "BufUnload", "BufWipeout" }, {
+		buffer = buf,
 		callback = function()
 			self.state.open = false
-			-- Required to hide the cursor when folke/noice.nvim is installed
-			require("veil.compat").noice(true)
-
-			return true
 		end,
 	})
+end
 
-	self.state.open = true
+---@param replace boolean Whether to replace the current buffer
+function Veil:display(replace)
+	self:init_buf(replace)
+	self.state.stack = self:mkstack()
+	self:redraw()
+	self:init_loop()
+end
+
+function Veil:init_loop()
 	local timer = vim.loop.new_timer()
-	self:redraw(true)
 
 	timer:start(
-		200,
-		200,
+		250,
+		250,
 		vim.schedule_wrap(function()
 			if self.state.open == false then
 				timer:stop()
@@ -249,155 +125,112 @@ function veil:display(replace)
 			end
 		end)
 	)
+	self.state.timer = timer
 end
 
-function veil.interact()
-	local section = veil:section_at_cursor()
-	if not section then
+function Veil:kill_loop()
+	if self.state.timer ~= nil then
+		self.state.timer:stop()
+		self.state.timer = nil
+	end
+end
+
+---@param init boolean Whether this is the first time the window is being drawn
+function Veil:redraw()
+	if not self.state.open then
 		return
 	end
-	local handle = section.handle
-	local offset = veil:section_offset(section)
-	if handle.on_interact then
-		handle.on_interact(offset, 1)
+	api.nvim_buf_clear_namespace(self.state.buffer, self.state.ns, 1, -1)
+	local current_line = 1
+	if self.state.height < self.state.window.height then
+		current_line = math.floor(self.state.window.height / 2) - math.floor(self.state.height / 2)
 	end
-end
-
-function veil:redraw(init)
-	self.ns = vim.api.nvim_create_namespace("veil")
-	local utils = require("veil.utils")
-	local win_width = vim.api.nvim_win_get_width(self.win)
-	local win_height = vim.api.nvim_win_get_height(self.win)
-
-	local rendered = {}
-	local veil_height = 0
-	for _, s in ipairs(self.settings.sections) do
-		local section = s:render():pad(win_width)
-		veil_height = veil_height + section.nlines
-		table.insert(rendered, section)
-	end
-
-	vim.api.nvim_buf_set_option(self.buf, "modifiable", true)
-	if init or self.state.resized then
-		self.loclist:clear()
-		self.state.resized = false
-	end
-
-	local current_height = 0
-	if veil_height < win_height then
-		current_height = math.floor((self.state.height - veil_height) / 4)
-	end
-	for id, section in ipairs(rendered) do
-		if self.state.vcursor == 0 and not section.virt then
-			self.state.vcursor = current_height + 1
+	for snr, section in ipairs(self.state.stack) do
+		local section_start = current_line
+		if self.state.current.cursor > section_start and self.state.current.cursor < section.nlines then
+			section.focused = true
+			section.focus_offset = self.state.current.cursor - section_start
+		else
+			section.focused = false
 		end
-		local virt = {}
-		local max_width = 0
-		for i, line in ipairs(section.text) do
-			local leading, rest = utils.split_leading(line)
-			max_width = math.max(max_width, #rest)
-			local focused = (not section.virt) and (self.state.vcursor == current_height + i)
-			local sep = self.settings.selection.separators
-			if focused then
-				local fhl = vim.api.nvim_get_hl_by_id(section.focused_hl, true)
-				local inv_hl = {
-					fg = fhl.guibg or fhl.bg or fhl.background,
-					bg = "none",
-				}
-				vim.api.nvim_set_hl(0, section.focused_hl .. "Inv", inv_hl)
+		section = section:render()
+		local rendered = {}
+		for lnr, line in ipairs(section.content) do
+			local line_len = 0
+			for cnr, chunk in ipairs(line) do
+				if cnr == 1 then
+					table.insert(rendered, {})
+				end
+				local hl = chunk.hl
+				local text = chunk.text
+				if not hl then
+					hl = "Normal"
+				end
+				if type(hl) == "table" then
+					vim.api.nvim_set_hl(self.state.ns, "VeilSection" .. snr .. "_L" .. lnr .. "_C" .. cnr, hl)
+					hl = "VeilSection" .. snr .. "_L" .. lnr .. "_C" .. cnr
+				end
+				line_len = line_len + string.len(text)
+				-- convert to extmark format
+				table.insert(rendered[#rendered], { text, hl })
 			end
-			if #rest > 0 then
-				table.insert(virt, {
-					{ leading, "Normal" },
-					{ focused and sep.left or " ", focused and section.focused_hl .. "Inv" or "Normal" },
-					{ rest, focused and section.focused_hl or section.hl },
-					{ focused and sep.right or " ", focused and section.focused_hl .. "Inv" or "Normal" },
-				})
-			else
-				table.insert(virt, {
-					{ leading, "Normal" },
-					-- { focused and sep.left or " ", focused and section.focused_hl .. "Inv" or "Normal" },
-					-- { focused and sep.right or " ", focused and section.focused_hl .. "Inv" or "Normal" },
-				})
+			if self.config.center.horizontal and line_len < self.state.window.width then
+				for i, _ in ipairs(rendered) do
+					table.insert(
+						rendered[i],
+						1,
+						{ string.rep(" ", math.floor(self.state.window.width / 2) - (line_len * 2)), "Normal" }
+					)
+				end
 			end
+			current_line = current_line + 1
 		end
-
-		vim.api.nvim_buf_set_extmark(self.buf, veil.ns, current_height, 0, {
-			id = id,
+		api.nvim_buf_set_extmark(self.state.buffer, self.state.ns, section_start, 0, {
 			virt_text_pos = "eol",
-			virt_lines = virt,
+			virt_lines = rendered,
 		})
-
-		self.loclist[id] = {
-			startl = current_height,
-			endl = current_height + section.nlines,
-			nlines = section.nlines,
-			handle = section,
-			interactive = not section.virt,
-			int_start = section.int_start,
-		}
-
-		current_height = current_height + section.nlines
-	end
-	if self.state.vcursor == 0 then
-		self.state.vcursor = 1
-	end
-	vim.api.nvim_buf_set_option(self.buf, "modifiable", false)
-end
-
-function veil:map(lhs, rhs)
-	if not self.buf then
-		self.settings.mappings[lhs] = rhs
-	else
-		vim.api.nvim_buf_set_keymap(self.buf, "n", lhs, rhs, {})
 	end
 end
 
-function veil.setup(opts)
-	if veil.state.loaded then
-		return
+---@return Section[] stack
+function Veil:mkstack()
+	---@type Section[]
+	local stack = {}
+	for idx, section in ipairs(self.config.sections) do
+		table.insert(stack, Section:new(section, idx))
+		-- Initialize the sections
+		self.state.height = self.state.height + #stack[#stack]:render(true)
 	end
-	veil.state.loaded = true
-	veil.state.guicursor = vim.api.nvim_get_option("guicursor")
-	veil:configure(opts)
-	veil.ns = vim.api.nvim_create_namespace("veil")
+	return stack
+end
 
-	if veil.settings.startup then
-		vim.api.nvim_create_autocmd("BufEnter", {
+function Veil.setup(config)
+	Veil.config = vim.tbl_deep_extend("force", Veil.config, config)
+	if not Veil.state.loaded then
+		-- TODO: create mappings here
+		for _keymap, _fn in pairs(Veil.config.mappings) do
+		end
+	end
+	Veil.state.loaded = true
+
+	if Veil.config.startup then
+		autocmd("BufEnter", {
 			once = true,
 			callback = function()
 				if vim.fn.argc() == 0 then
-					veil:display(true)
+					Veil:display(true)
 				end
-				return true
 			end,
 		})
 	end
 
 	vim.api.nvim_create_user_command("Veil", function()
-		veil:display()
+		Veil:display()
 	end, {})
 end
 
 return {
-	setup = veil.setup,
-	display = function(replace)
-		veil:display(replace or false)
+	setup = function(config)
+		Veil:setup(config)
 	end,
-	map = function(...)
-		veil:map(...)
-	end,
-	move = {
-		up = up,
-		down = down,
-	},
-	api = {
-		move = {
-			up = up,
-			down = down,
-		},
-		get_buf = veil.get_buf,
-		get_win = veil.get_win,
-		get_state = veil.get_state,
-	},
 }
