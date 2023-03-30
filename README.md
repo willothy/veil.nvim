@@ -75,6 +75,10 @@ The defaults assume you have Telescope installed because... you probably do.<br/
 ```lua
 local builtin = require("veil.builtin")
 
+-- if you want to have the days of the week display, uncomment the following line
+-- local current_day = os.date("%A")
+-- then change "builtin.headers.frames_nvim" to "builtin.headers.frames_days_of_week[current_day]"
+
 local default = {
   sections = {
     builtin.sections.animated(builtin.headers.frames_nvim, {
