@@ -18,7 +18,8 @@ A blazingly fast, animated, and infinitely customizeable startup / dashboard plu
 - [x] Static text sections
 - [x] Dynamic text sections
   - [x] Per-section state
-- [x] Simple and extensible API
+- [ ] Simple and extensible API
+  - [ ] Rendering / API V2 (in progress)
 - [x] Interactible components (use buttons with `<CR>`)
   - [x] Cursor 'hover' events
   - [x] Lock cursor to menus
@@ -27,8 +28,6 @@ A blazingly fast, animated, and infinitely customizeable startup / dashboard plu
 - [x] Startup in <1ms
 - [ ] Mouse events
 - [ ] API for advanced rendering / terminal graphics
-  - [ ] Bundle drawille (temporary, in progress)
-  - [ ] Custom rendering API (to eventually replace drawille dependency)
 
 ## Demo (default config)
 
