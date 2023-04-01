@@ -10,7 +10,7 @@ A blazingly fast, animated, and infinitely customizeable startup / dashboard plu
 - [x] Animated sections rendered with virtual text
 - [x] Builtin "standard library"
   - [x] Buttons builtin
-  - [X] Oldfiles builtin
+  - [x] Oldfiles builtin
   - [ ] Current dir builtin
   - [ ] Floating widget builtin
   - [x] Ascii frame anim builtin
@@ -34,11 +34,7 @@ A blazingly fast, animated, and infinitely customizeable startup / dashboard plu
 <!--https://user-images.githubusercontent.com/38540736/227105511-7988cd83-be56-4606-a32d-07d6245d1307.mp4-->
 <!--https://user-images.githubusercontent.com/38540736/227207398-b8f7af6a-0e88-4874-93fa-196e78c14938.mp4-->
 
-
-
 https://user-images.githubusercontent.com/38540736/228553706-b68e99a7-c4d6-4803-a06e-4e3bb12109ea.mp4
-
-
 
 ## Installation
 
@@ -116,11 +112,35 @@ local default = {
         end,
       },
     }),
+    builtin.sections.oldfiles(),
   },
-  builtin.sections.oldfiles(),
   mappings = {},
   startup = true,
   listed = false
+}
+
+```
+
+</details>
+
+### Configuration Recipes
+
+<details>
+<summary>Days of week header by [@coopikoop](https://github.com/coopikoop)</summary>
+
+```lua
+-- in your config:
+
+local current_day = os.date("%A")
+
+require('veil').setup({
+  sections = {
+    builtin.sections.animated(builtin.headers.frames_days_of_week[current_day], {
+      hl = { fg = "#5de4c7" },
+    }),
+    -- other sections
+    -- ...
+  }
 }
 
 ```
