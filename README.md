@@ -126,7 +126,7 @@ local default = {
 ### Configuration Recipes
 
 <details>
-<summary>Days of week header by [@coopikoop](https://github.com/coopikoop)</summary>
+<summary>Days of week header by <a href="https://github.com/coopikoop">@coopikoop</a></summary>
 
 ```lua
 -- in your config:
