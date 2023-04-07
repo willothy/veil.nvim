@@ -174,16 +174,25 @@ function Veil:redraw()
 				-- convert to extmark format
 				table.insert(rendered[#rendered], { text, hl })
 			end
-			if self.config.center.horizontal and line_len < self.state.window.width then
-				for i, _ in ipairs(rendered) do
-					table.insert(
-						rendered[i],
-						1,
-						{ string.rep(" ", math.floor(self.state.window.width / 2) - (line_len * 2)), "Normal" }
-					)
-				end
-			end
 			current_line = current_line + 1
+		end
+		local max_width = 0
+		for _, r in ipairs(rendered) do
+			local line_len = 0
+			for _, chunk in ipairs(r) do
+				line_len = line_len + string.len(chunk[1])
+			end
+			if line_len > max_width then
+				max_width = line_len
+			end
+		end
+		if self.config.center.horizontal and max_width < self.state.window.width then
+			for i, _ in ipairs(rendered) do
+				table.insert(rendered[i], 1, {
+					string.rep(" ", math.floor(self.state.window.width / 2) - (max_width / 2)),
+					"Normal",
+				})
+			end
 		end
 		api.nvim_buf_set_extmark(self.state.buffer, self.state.ns, section_start, 0, {
 			virt_text_pos = "eol",
