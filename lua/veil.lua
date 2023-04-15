@@ -87,6 +87,7 @@ function Veil:init_buf(replace)
 	--  vim.bo[buf].
 	api.nvim_set_current_buf(buf)
 	vim.cmd("setlocal nonu nornu")
+	vim.cmd('setlocal statuscolumn=""')
 	local empty = {}
 	for i = 1, self.state.window.height do
 		empty[i] = ""
@@ -189,7 +190,7 @@ function Veil:redraw()
 		if self.config.center.horizontal and max_width < self.state.window.width then
 			for i, _ in ipairs(rendered) do
 				table.insert(rendered[i], 1, {
-					string.rep(" ", math.floor(self.state.window.width / 2) - (max_width / 2)),
+					string.rep(" ", math.floor(self.state.window.width / 2) - math.floor(max_width / 2)),
 					"Normal",
 				})
 			end
