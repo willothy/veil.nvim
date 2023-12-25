@@ -2,8 +2,15 @@
 
 A blazingly fast, animated, and infinitely customizeable startup / dashboard plugin
 
+> UPDATE *12/25/2023*:
+
+> Everything below this notice is deprecated, pending a complete rewrite. As seen in #14, I intend to rebuild Veil
+as a composable floating-window-based UI library providing rendering, placement, interaction, and query primitives.
+The architecture should allow for complex startup screens with widgets and graphs, interactable items, animated headers (like before),
+and much more. Floating windows should also make supporting mouse interaction for heretics (/j) much easier.
+
 > **Warning**  
-> Work in progress, there may be some bugs :)
+> I would not recommend using the current implementation, as I am not maintaining it and it is likely very buggy.
 
 ## Features
 
