@@ -58,7 +58,7 @@ https://user-images.githubusercontent.com/38540736/228553706-b68e99a7-c4d6-4803-
     "nvim-telescope/telescope.nvim",
     "nvim-lua/plenary.nvim",
     "nvim-telescope/telescope-file-browser.nvim"
-  }
+  },
   config = true,
   -- or configure with:
   -- opts = { ... }
